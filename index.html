@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>식물 관찰 학습</title>
+  <style>
+    :root {
+      --green-900: #173d2a;
+      --green-700: #2f6948;
+      --green-100: #e7f0e7;
+      --paper: #fffdf8;
+      --ground: #f4f1e8;
+      --line: #d8e1d7;
+      --muted: #66756b;
+      --error: #9a482f;
+      --error-bg: #fae8e0;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      overflow: hidden;
+      color: var(--green-900);
+      background:
+        radial-gradient(circle at 5% 0%, #e5efe2 0, transparent 35%),
+        radial-gradient(circle at 100% 0%, #f3e9d6 0, transparent 32%),
+        var(--ground);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    }
+
+    button, textarea { font: inherit; }
+
+    .page {
+      height: 100%;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+
+    .logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-size: 23px;
+      background: linear-gradient(145deg, #4c9566, var(--green-900));
+      box-shadow: 0 9px 22px rgb(23 61 42 / 18%);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -.04em;
+    }
+
+    header p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    main {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(340px, .88fr);
+      gap: 14px;
+    }
+
+    .panel {
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--paper);
+      box-shadow: 0 15px 34px rgb(23 61 42 / 8%);
+    }
+
+    .panel-head {
+      min-height: 52px;
+      padding: 13px 17px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: var(--green-700);
+      background: var(--green-100);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge.error {
+      color: var(--error);
+      background: var(--error-bg);
+    }
+
+    .photo-body {
+      flex: 1;
+      min-height: 0;
+      padding: 14px;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 92px;
+      gap: 11px;
+    }
+
+    .stage {
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      border: 1px dashed #acc4ae;
+      border-radius: 17px;
+      background: repeating-linear-gradient(
+        135deg, #f5f8f2 0 14px, #edf3eb 14px 28px
+      );
+    }
+
+    .stage.drag { outline: 3px solid #83ae8a; }
+    .stage.filled { background: #152019; border-style: solid; }
+
+    .stage > img {
+      display: none;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .stage.filled > img { display: block; }
+
+    .empty {
+      max-width: 330px;
+      padding: 24px;
+      text-align: center;
+      line-height: 1.6;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .empty strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--green-900);
+      font-size: 17px;
+    }
+
+    .stage.filled .empty,
+    .stage.has-file .empty { display: none; }
+
+    .doc-preview {
+      display: none;
+      max-width: 360px;
+      padding: 28px 24px;
+      border-radius: 18px;
+      text-align: center;
+      background: white;
+      box-shadow: 0 10px 24px rgb(23 61 42 / 10%);
+    }
+
+    .stage.has-file {
+      background: #f5f8f2;
+      border-style: solid;
+    }
+
+    .stage.has-file .doc-preview { display: block; }
+
+    .doc-preview .ext {
+      display: inline-block;
+      min-width: 64px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      color: white;
+      background: var(--green-700);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+
+    .doc-preview strong {
+      display: block;
+      margin: 12px 0 6px;
+      word-break: break-all;
+      font-size: 16px;
+    }
+
+    .doc-preview p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .caption {
+      display: none;
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      left: 10px;
+      padding: 8px 11px;
+      border-radius: 10px;
+      color: white;
+      background: rgb(12 25 17 / 70%);
+      backdrop-filter: blur(7px);
+      font-size: 12px;
+    }
+
+    .stage.filled .caption,
+    .stage.has-file .caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .thumbs {
+      min-width: 0;
+      display: flex;
+      gap: 9px;
+      overflow-x: auto;
+      padding: 3px;
+    }
+
+    .add-photo, .thumb {
+      width: 82px;
+      height: 82px;
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+      cursor: pointer;
+    }
+
+    .add-photo {
+      display: grid;
+      place-content: center;
+      gap: 3px;
+      color: var(--green-700);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .add-photo b { font-size: 22px; line-height: 1; }
+
+    .thumb {
+      position: relative;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .thumb.active { outline: 3px solid var(--green-700); }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .thumb.doc {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 8px 6px;
+      background: #f3f7f2;
+    }
+
+    .thumb.doc .ext {
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: white;
+      background: var(--green-700);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .thumb.doc .fname {
+      max-width: 100%;
+      overflow: hidden;
+      color: var(--green-900);
+      font-size: 10px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      color: white;
+      background: rgb(15 31 21 / 78%);
+      cursor: pointer;
+    }
+
+    #fileInput { display: none; }
+
+    .chat-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .messages {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 17px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .message {
+      max-width: 86%;
+      padding: 11px 13px;
+      border-radius: 16px;
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .message-text { white-space: pre-wrap; }
+
+    .message.bot {
+      align-self: flex-start;
+      border-bottom-left-radius: 5px;
+      background: var(--green-100);
+    }
+
+    .message.user {
+      align-self: flex-end;
+      border-bottom-right-radius: 5px;
+      color: white;
+      background: var(--green-900);
+    }
+
+    .message-files {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .reply-file {
+      overflow: hidden;
+      border: 1px solid #c9d8c8;
+      border-radius: 12px;
+      background: white;
+    }
+
+    .reply-file img {
+      display: block;
+      width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      background: #152019;
+    }
+
+    .reply-file-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+    }
+
+    .reply-file-meta span {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--green-900);
+      font-size: 12px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .reply-file-meta a {
+      flex: 0 0 auto;
+      color: var(--green-700);
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .reply-file.doc .reply-file-meta {
+      padding: 11px 12px;
+    }
+
+    .notice {
+      margin: 0 14px 10px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    form {
+      padding: 11px 13px 14px;
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid var(--line);
+      background: white;
+    }
+
+    textarea {
+      flex: 1;
+      min-height: 46px;
+      max-height: 110px;
+      resize: none;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      outline: none;
+    }
+
+    textarea:focus { border-color: #78a481; }
+
+    form button {
+      padding: 0 16px;
+      border: 0;
+      border-radius: 13px;
+      color: white;
+      background: var(--green-700);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:disabled, textarea:disabled {
+      cursor: wait;
+      opacity: .55;
+    }
+
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .page { height: auto; min-height: 100%; }
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: 540px 520px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="logo" aria-hidden="true">⌁</div>
+      <div>
+        <h1>식물 관찰 학습</h1>
+        <p>사진과 문서를 첨부한 뒤 관찰한 점을 학습 도우미와 이야기해 보세요.</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel" aria-label="관찰 자료">
+        <div class="panel-head">
+          <h2>관찰 자료</h2>
+          <span class="badge" id="photoCount">자료 0개</span>
+        </div>
+        <div class="photo-body">
+          <div class="stage" id="stage">
+            <div class="empty" id="emptyState">
+              <strong>관찰할 사진이나 문서를 선택하세요</strong>
+              사진, 워드, 파워포인트, 엑셀, 텍스트 파일을 추가하거나 이곳으로 끌어다 놓을 수 있습니다.
+            </div>
+            <img id="preview" alt="선택한 식물 사진">
+            <div class="doc-preview" id="docPreview">
+              <span class="ext" id="docExt">FILE</span>
+              <strong id="docTitle"></strong>
+              <p>보내기를 누르면 이 파일이 AI에게 전달됩니다.</p>
+            </div>
+            <div class="caption">
+              <span id="photoName"></span>
+              <span id="photoPosition"></span>
+            </div>
+          </div>
+          <div class="thumbs" id="thumbs">
+            <button class="add-photo" id="addPhoto" type="button">
+              <b>+</b><span>자료 추가</span>
+            </button>
+          </div>
+          <input id="fileInput" type="file" accept="image/*,.txt,.md,.csv,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="관찰 채팅">
+        <div class="panel-head">
+          <h2>관찰 대화</h2>
+          <span class="badge error" id="status">연결 확인 중</span>
+        </div>
+        <div class="chat-body">
+          <div class="messages" id="messages"></div>
+          <p class="notice">선택한 사진과 문서는 질문과 함께 AI로 전송되며, AI가 만든 파일도 답변에서 받아볼 수 있습니다.</p>
+          <form id="chatForm">
+            <textarea id="chatInput" rows="1" placeholder="관찰한 점이나 궁금한 점을 입력하세요"></textarea>
+            <button id="sendButton" type="submit">보내기</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const stage = document.getElementById("stage");
+    const preview = document.getElementById("preview");
+    const docExt = document.getElementById("docExt");
+    const docTitle = document.getElementById("docTitle");
+    const thumbs = document.getElementById("thumbs");
+    const fileInput = document.getElementById("fileInput");
+    const photoCount = document.getElementById("photoCount");
+    const photoName = document.getElementById("photoName");
+    const photoPosition = document.getElementById("photoPosition");
+    const messages = document.getElementById("messages");
+    const status = document.getElementById("status");
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
+    const sendButton = document.getElementById("sendButton");
+
+    const DOCUMENT_EXTS = [".txt", ".md", ".csv", ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"];
+    const MAX_ITEMS = 10;
+    const items = [];
+    let selectedId = null;
+    let sending = false;
+    const sessionId = getSessionId();
+
+    addMessage(
+      "안녕! 식물을 자세히 관찰해 보자. 사진이나 문서를 첨부하면 그 자료를 직접 보고 함께 생각해 볼게.",
+      "bot",
+    );
+    checkConnection();
+
+    document.getElementById("addPhoto").addEventListener("click", () => {
+      fileInput.click();
+    });
+    fileInput.addEventListener("change", (event) => {
+      addFiles(event.target.files);
+      fileInput.value = "";
+    });
+
+    ["dragenter", "dragover"].forEach((type) => {
+      stage.addEventListener(type, (event) => {
+        event.preventDefault();
+        stage.classList.add("drag");
+      });
+    });
+    ["dragleave", "drop"].forEach((type) => {
+      stage.addEventListener(type, (event) => {
+        event.preventDefault();
+        stage.classList.remove("drag");
+      });
+    });
+    stage.addEventListener("drop", (event) => addFiles(event.dataTransfer.files));
+
+    function fileExt(name) {
+      const match = String(name || "").toLowerCase().match(/\.[a-z0-9]+$/);
+      return match ? match[0] : "";
+    }
+
+    function isImageFile(file) {
+      return file.type.startsWith("image/");
+    }
+
+    function isDocumentFile(file) {
+      return DOCUMENT_EXTS.includes(fileExt(file.name));
+    }
+
+    function addFiles(fileList) {
+      const accepted = [...fileList].filter((file) => isImageFile(file) || isDocumentFile(file));
+      if (!accepted.length) return;
+
+      let added = 0;
+      for (const file of accepted) {
+        if (items.length >= MAX_ITEMS) break;
+        const image = isImageFile(file);
+        items.push({
+          id: crypto.randomUUID(),
+          name: file.name,
+          mime: file.type || (image ? "image/jpeg" : "application/octet-stream"),
+          kind: image ? "image" : "document",
+          file,
+          url: image ? URL.createObjectURL(file) : "",
+        });
+        added += 1;
+      }
+      if (added) selectItem(items[items.length - 1].id);
+    }
+
+    function selectItem(id) {
+      const item = items.find((entry) => entry.id === id);
+      if (!item) return;
+      selectedId = id;
+
+      if (item.kind === "image") {
+        preview.src = item.url;
+        stage.classList.add("filled");
+        stage.classList.remove("has-file");
+      } else {
+        preview.removeAttribute("src");
+        docExt.textContent = fileExt(item.name).replace(".", "").toUpperCase() || "FILE";
+        docTitle.textContent = item.name;
+        stage.classList.remove("filled");
+        stage.classList.add("has-file");
+      }
+      renderItems();
+    }
+
+    function removeItem(id) {
+      const index = items.findIndex((entry) => entry.id === id);
+      if (index < 0) return;
+      if (items[index].url) URL.revokeObjectURL(items[index].url);
+      items.splice(index, 1);
+
+      if (!items.length) {
+        selectedId = null;
+        preview.removeAttribute("src");
+        stage.classList.remove("filled", "has-file");
+        renderItems();
+      } else if (selectedId === id) {
+        selectItem(items[Math.min(index, items.length - 1)].id);
+      } else {
+        renderItems();
+      }
+    }
+
+    function renderItems() {
+      thumbs.querySelectorAll(".thumb").forEach((item) => item.remove());
+      photoCount.textContent = `자료 ${items.length}개`;
+
+      for (const item of items) {
+        const button = document.createElement("div");
+        button.className = `thumb${item.kind === "document" ? " doc" : ""}${item.id === selectedId ? " active" : ""}`;
+        button.setAttribute("role", "button");
+        button.setAttribute("tabindex", "0");
+        button.setAttribute("aria-label", `${item.name} 선택`);
+
+        if (item.kind === "image") {
+          const image = document.createElement("img");
+          image.src = item.url;
+          image.alt = "";
+          button.append(image);
+        } else {
+          const ext = document.createElement("span");
+          ext.className = "ext";
+          ext.textContent = fileExt(item.name).replace(".", "").toUpperCase() || "FILE";
+          const fname = document.createElement("span");
+          fname.className = "fname";
+          fname.textContent = item.name;
+          button.append(ext, fname);
+        }
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "remove";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", `${item.name} 삭제`);
+        remove.addEventListener("click", (event) => {
+          event.stopPropagation();
+          removeItem(item.id);
+        });
+
+        button.append(remove);
+        button.addEventListener("click", () => selectItem(item.id));
+        button.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectItem(item.id);
+          }
+        });
+        thumbs.appendChild(button);
+      }
+
+      const selected = items.find((item) => item.id === selectedId);
+      photoName.textContent = selected?.name || "";
+      photoPosition.textContent = selected
+        ? `${items.indexOf(selected) + 1} / ${items.length}`
+        : "";
+    }
+
+    chatForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const message = chatInput.value.trim();
+      if (sending || (!message && !items.length)) return;
+
+      const display = message
+        ? (items.length ? `${message}\n\n첨부 ${items.length}개: ${items.map((item) => item.name).join(", ")}` : message)
+        : `첨부 ${items.length}개: ${items.map((item) => item.name).join(", ")}`;
+      addMessage(display, "user");
+      chatInput.value = "";
+      setSending(true);
+      const waiting = addMessage("답변을 생각하고 있어요…", "bot");
+
+      try {
+        const attachments = await Promise.all(items.map((item) => toAttachment(item)));
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, sessionId, attachments }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "채팅 요청에 실패했습니다.");
+        setBotReply(waiting, data.textResponse, data.files);
+        setStatus(true, "AnythingLLM 연결됨");
+      } catch (error) {
+        waiting.textContent = `연결 오류: ${error.message}`;
+        setStatus(false, "연결 오류");
+      } finally {
+        setSending(false);
+        chatInput.focus();
+      }
+    });
+
+    async function toAttachment(item) {
+      if (item.kind === "image") {
+        const contentString = await compressImage(item.file);
+        return {
+          name: replaceExt(item.name, contentString.startsWith("data:image/jpeg") ? ".jpg" : fileExt(item.name) || ".png"),
+          mime: contentString.startsWith("data:image/jpeg") ? "image/jpeg" : (item.mime || "image/png"),
+          contentString,
+        };
+      }
+      return {
+        name: item.name,
+        mime: item.mime || "application/octet-stream",
+        contentString: await readAsDataUrl(item.file),
+      };
+    }
+
+    function replaceExt(name, ext) {
+      return name.replace(/\.[a-z0-9]+$/i, "") + ext;
+    }
+
+    function readAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("파일을 읽지 못했습니다."));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function compressImage(file, maxSize = 1280, quality = 0.82) {
+      if (file.type === "image/svg+xml") return readAsDataUrl(file);
+      const objectUrl = URL.createObjectURL(file);
+      try {
+        const image = await loadImage(objectUrl);
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/jpeg", quality);
+      } catch {
+        return readAsDataUrl(file);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    }
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = url;
+      });
+    }
+
+    chatInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        chatForm.requestSubmit();
+      }
+    });
+
+    function addMessage(text, role) {
+      const element = document.createElement("div");
+      element.className = `message ${role}`;
+      const body = document.createElement("div");
+      body.className = "message-text";
+      body.textContent = text;
+      element.appendChild(body);
+      messages.appendChild(element);
+      messages.scrollTop = messages.scrollHeight;
+      return element;
+    }
+
+    function setBotReply(element, text, files) {
+      element.replaceChildren();
+      const body = document.createElement("div");
+      body.className = "message-text";
+      body.textContent = text || "";
+      element.appendChild(body);
+
+      const safeFiles = Array.isArray(files) ? files.filter(isSafeReplyFile) : [];
+      if (!safeFiles.length) {
+        messages.scrollTop = messages.scrollHeight;
+        return;
+      }
+
+      const list = document.createElement("div");
+      list.className = "message-files";
+      for (const file of safeFiles) {
+        list.appendChild(renderReplyFile(file));
+      }
+      element.appendChild(list);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function isSafeReplyFile(file) {
+      if (!file || typeof file.name !== "string" || typeof file.url !== "string") return false;
+      if (file.url.startsWith("/api/files/")) return true;
+      return /^(data:image\/|data:application\/|data:text\/plain|data:text\/csv|data:text\/markdown)/i.test(file.url);
+    }
+
+    function renderReplyFile(file) {
+      const card = document.createElement("div");
+      card.className = `reply-file${file.kind === "image" ? "" : " doc"}`;
+
+      if (file.kind === "image") {
+        const image = document.createElement("img");
+        image.src = file.url;
+        image.alt = file.name;
+        card.appendChild(image);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "reply-file-meta";
+      const label = document.createElement("span");
+      label.textContent = file.name;
+      const link = document.createElement("a");
+      link.href = file.url;
+      link.download = file.name;
+      link.textContent = "다운로드";
+      meta.append(label, link);
+      card.appendChild(meta);
+      return card;
+    }
+
+    async function checkConnection() {
+      try {
+        const response = await fetch("/api/health");
+        const data = await response.json().catch(() => ({}));
+        setStatus(response.ok, response.ok ? "AnythingLLM 연결됨" : data.error || "설정 필요");
+      } catch {
+        setStatus(false, "로컬 서버 연결 오류");
+      }
+    }
+
+    function setStatus(connected, text) {
+      status.textContent = text;
+      status.classList.toggle("error", !connected);
+      status.title = text;
+    }
+
+    function setSending(value) {
+      sending = value;
+      chatInput.disabled = value;
+      sendButton.disabled = value;
+      fileInput.disabled = value;
+      document.getElementById("addPhoto").disabled = value;
+    }
+
+    function getSessionId() {
+      const key = "plant-observation-session";
+      let value = localStorage.getItem(key);
+      if (!value) {
+        value = crypto.randomUUID();
+        localStorage.setItem(key, value);
+      }
+      return value;
+    }
+  </script>
+</body>
+</html>
