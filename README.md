@@ -27,9 +27,24 @@
 `.env`를 수정했다면 실행 중인 서버 창에서 `Ctrl+C`를 누른 후
 `start.bat`을 다시 실행해야 합니다.
 
+## Railway 배포
+
+1. Railway에서 `yoonzero302/Ai-Agent` 저장소의 `main` 브랜치를 서비스로 추가합니다. 시작 명령은 `npm start`입니다. 서비스의 Healthcheck Path를 `/healthz`로 지정하고 학습 페이지에 Railway 도메인을 생성합니다.
+2. 같은 프로젝트와 환경에 `anythingllm` 서비스를 추가합니다. Docker 이미지는 `mintplexlabs/anythingllm:latest`, `PORT`는 `3001`을 사용합니다. `/app/server/storage`에 볼륨을 붙이고 `STORAGE_DIR`도 같은 경로로 설정합니다.
+3. AnythingLLM에서 관리자 접근을 설정하고 사용할 모델을 연결한 뒤 식물 관찰용 워크스페이스를 만듭니다. 사진 질문에는 이미지를 지원하는 모델이 필요합니다. Settings → Developer API에서 이 인스턴스의 API 키를 발급합니다.
+4. 아래 값을 **학습 페이지 서비스의 Variables**에 추가한 다음 변경사항을 배포합니다. 키는 Railway에 저장합니다.
+
+   ```env
+   ANYTHINGLLM_URL=http://${{anythingllm.RAILWAY_PRIVATE_DOMAIN}}:3001
+   ANYTHINGLLM_API_KEY=Railway에서_실행_중인_AnythingLLM의_Developer_API_키
+   ANYTHINGLLM_WORKSPACE_SLUG=식물_관찰_워크스페이스_slug
+   ```
+
+5. `/healthz`에서 웹 서버 상태를 확인하고, `/api/health`에서 AnythingLLM 연결 상태를 확인합니다. 학습 페이지 대화창에 질문을 보내 모델 응답까지 확인합니다.
+
 ## 보안 및 기능 안내
 
-- API 키는 브라우저로 전달되지 않고 로컬 Node.js 서버에서만 사용됩니다.
+- API 키는 브라우저로 전달되지 않고 Node.js 서버에서만 사용됩니다.
 - `.env`는 Git에 포함되지 않습니다.
 - 왼쪽에서 선택한 사진과 문서(워드, 파워포인트, 엑셀, 텍스트, PDF 등)는 질문과 함께 AnythingLLM으로 전송됩니다.
 - AI가 생성한 파일이 AnythingLLM에서 오지 않더라도, 워드/엑셀/텍스트 요청이면 웹앱이 답변 본문으로 파일을 만들어 첨부합니다.
