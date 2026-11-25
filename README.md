@@ -30,8 +30,8 @@
 ## Railway 배포
 
 1. Railway에서 `yoonzero302/Ai-Agent` 저장소의 `main` 브랜치를 서비스로 추가합니다. 시작 명령은 `npm start`입니다. 서비스의 Healthcheck Path를 `/healthz`로 지정하고 학습 페이지에 Railway 도메인을 생성합니다.
-2. 같은 프로젝트와 환경에 `anythingllm` 서비스를 추가합니다. Docker 이미지는 `mintplexlabs/anythingllm:latest`, `PORT`는 `3001`을 사용합니다. `/app/server/storage`에 볼륨을 붙이고 `STORAGE_DIR`도 같은 경로로 설정합니다.
-3. AnythingLLM에서 관리자 접근을 설정하고 사용할 모델을 연결한 뒤 식물 관찰용 워크스페이스를 만듭니다. 사진 질문에는 이미지를 지원하는 모델이 필요합니다. Settings → Developer API에서 이 인스턴스의 API 키를 발급합니다.
+2. 같은 프로젝트와 환경에 `anythingllm` 서비스를 추가합니다. Docker 이미지는 `mintplexlabs/anythingllm:railway`를 사용합니다. `PORT`와 `SERVER_PORT`는 `3001`, `STORAGE_DIR`는 `/storage`로 지정하고 같은 `/storage` 경로에 볼륨을 붙입니다.
+3. AnythingLLM 관리자 화면은 [Railway SSH 로컬 포트 포워딩](https://docs.railway.com/cli/ssh#forward-a-port-with-ssh--l)으로 열 수 있습니다. 로컬 포트 `13001`을 AnythingLLM 컨테이너의 `127.0.0.1:3001`로 연결한 뒤 브라우저에서 `http://localhost:13001`을 엽니다. AnythingLLM에서 관리자 접근을 설정하고 사용할 모델을 연결한 뒤 식물 관찰용 워크스페이스를 만듭니다. 사진 질문에는 이미지를 지원하는 모델이 필요합니다. Settings → Developer API에서 이 인스턴스의 API 키를 발급합니다.
 4. 아래 값을 **학습 페이지 서비스의 Variables**에 추가한 다음 변경사항을 배포합니다. 키는 Railway에 저장합니다.
 
    ```env
