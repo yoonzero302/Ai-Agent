@@ -1,0 +1,13 @@
+{
+  "name": "plant-observation-learning-local",
+  "version": "1.0.0",
+  "private": true,
+  "description": "로컬 AnythingLLM 기반 식물 관찰 학습 웹앱",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
