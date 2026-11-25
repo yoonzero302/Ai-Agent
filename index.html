@@ -132,6 +132,37 @@
       gap: 11px;
     }
 
+    .material-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 12px 14px 0;
+    }
+
+    .material-tab {
+      min-width: 64px;
+      min-height: 36px;
+      padding: 5px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper);
+      color: var(--green-900);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .material-tab:hover { background: var(--green-100); }
+
+    .material-tab[aria-selected="true"] {
+      border-color: var(--green-700);
+      background: var(--green-700);
+      color: white;
+    }
+
+    .material-tab:focus-visible {
+      outline: 2px solid var(--green-700);
+      outline-offset: 2px;
+    }
+
     .stage {
       min-height: 0;
       position: relative;
@@ -488,10 +519,14 @@
           <h2>관찰 자료</h2>
           <span class="badge" id="photoCount">자료 0개</span>
         </div>
-        <div class="photo-body">
+        <div class="material-tabs" id="materialTabs" role="tablist" aria-label="관찰 대상">
+          <button class="material-tab" id="leafTab" type="button" role="tab" aria-selected="true" aria-controls="materialPanel">잎</button>
+          <button class="material-tab" id="flowerTab" type="button" role="tab" aria-selected="false" aria-controls="materialPanel" tabindex="-1">꽃</button>
+        </div>
+        <div class="photo-body" id="materialPanel" role="tabpanel" aria-labelledby="leafTab">
           <div class="stage" id="stage">
             <div class="empty" id="emptyState">
-              <strong>관찰할 사진이나 문서를 선택하세요</strong>
+              <strong id="materialPrompt">잎 사진이나 문서를 선택하세요</strong>
               사진, 워드, 파워포인트, 엑셀, 텍스트 파일을 추가하거나 이곳으로 끌어다 놓을 수 있습니다.
             </div>
             <img id="preview" alt="선택한 식물 사진">
@@ -521,7 +556,7 @@
         </div>
         <div class="chat-body">
           <div class="messages" id="messages"></div>
-          <p class="notice">선택한 사진과 문서는 질문과 함께 AI로 전송되며, AI가 만든 파일도 답변에서 받아볼 수 있습니다.</p>
+          <p class="notice">현재 탭에 첨부한 자료가 질문과 함께 AI로 전송되며, AI가 만든 파일도 답변에서 받아볼 수 있습니다.</p>
           <form id="chatForm">
             <textarea id="chatInput" rows="1" placeholder="관찰한 점이나 궁금한 점을 입력하세요"></textarea>
             <button id="sendButton" type="submit">보내기</button>
@@ -538,6 +573,9 @@
     const docTitle = document.getElementById("docTitle");
     const thumbs = document.getElementById("thumbs");
     const fileInput = document.getElementById("fileInput");
+    const materialTabs = document.getElementById("materialTabs");
+    const materialPanel = document.getElementById("materialPanel");
+    const materialPrompt = document.getElementById("materialPrompt");
     const photoCount = document.getElementById("photoCount");
     const photoName = document.getElementById("photoName");
     const photoPosition = document.getElementById("photoPosition");
@@ -549,8 +587,11 @@
 
     const DOCUMENT_EXTS = [".txt", ".md", ".csv", ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"];
     const MAX_ITEMS = 10;
-    const items = [];
-    let selectedId = null;
+    const materialGroups = new Map(Array.from(materialTabs.querySelectorAll('[role="tab"]'), (tab) => [
+      tab, { items: [], selectedId: null },
+    ]));
+    const tabs = [...materialGroups.keys()];
+    let activeGroup = materialGroups.get(tabs[0]);
     let sending = false;
     const sessionId = getSessionId();
 
@@ -559,6 +600,35 @@
       "bot",
     );
     checkConnection();
+
+    function activateMaterialTab(tab) {
+      activeGroup = materialGroups.get(tab);
+      for (const candidate of tabs) {
+        const selected = candidate === tab;
+        candidate.setAttribute("aria-selected", String(selected));
+        candidate.tabIndex = selected ? 0 : -1;
+      }
+      materialPanel.setAttribute("aria-labelledby", tab.id);
+      materialPrompt.textContent = `${tab.textContent} 사진이나 문서를 선택하세요`;
+      renderItems();
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => activateMaterialTab(tab));
+      tab.addEventListener("keydown", (event) => {
+        const destinations = {
+          ArrowLeft: (index + tabs.length - 1) % tabs.length,
+          ArrowRight: (index + 1) % tabs.length,
+          Home: 0,
+          End: tabs.length - 1,
+        };
+        const next = tabs[destinations[event.key]];
+        if (!next) return;
+        event.preventDefault();
+        activateMaterialTab(next);
+        next.focus();
+      });
+    });
 
     document.getElementById("addPhoto").addEventListener("click", () => {
       fileInput.click();
@@ -596,6 +666,7 @@
     }
 
     function addFiles(fileList) {
+      const { items } = activeGroup;
       const accepted = [...fileList].filter((file) => isImageFile(file) || isDocumentFile(file));
       if (!accepted.length) return;
 
@@ -617,43 +688,40 @@
     }
 
     function selectItem(id) {
-      const item = items.find((entry) => entry.id === id);
-      if (!item) return;
-      selectedId = id;
-
-      if (item.kind === "image") {
-        preview.src = item.url;
-        stage.classList.add("filled");
-        stage.classList.remove("has-file");
-      } else {
-        preview.removeAttribute("src");
-        docExt.textContent = fileExt(item.name).replace(".", "").toUpperCase() || "FILE";
-        docTitle.textContent = item.name;
-        stage.classList.remove("filled");
-        stage.classList.add("has-file");
-      }
+      if (!activeGroup.items.some((item) => item.id === id)) return;
+      activeGroup.selectedId = id;
       renderItems();
     }
 
+    function renderPreview(item) {
+      stage.classList.toggle("filled", item?.kind === "image");
+      stage.classList.toggle("has-file", item?.kind === "document");
+      if (item?.kind === "image") {
+        preview.src = item.url;
+      } else {
+        preview.removeAttribute("src");
+      }
+      if (item?.kind === "document") {
+        docExt.textContent = fileExt(item.name).replace(".", "").toUpperCase() || "FILE";
+        docTitle.textContent = item.name;
+      }
+    }
+
     function removeItem(id) {
+      const { items } = activeGroup;
       const index = items.findIndex((entry) => entry.id === id);
       if (index < 0) return;
       if (items[index].url) URL.revokeObjectURL(items[index].url);
       items.splice(index, 1);
 
-      if (!items.length) {
-        selectedId = null;
-        preview.removeAttribute("src");
-        stage.classList.remove("filled", "has-file");
-        renderItems();
-      } else if (selectedId === id) {
-        selectItem(items[Math.min(index, items.length - 1)].id);
-      } else {
-        renderItems();
+      if (activeGroup.selectedId === id) {
+        activeGroup.selectedId = items[Math.min(index, items.length - 1)]?.id ?? null;
       }
+      renderItems();
     }
 
     function renderItems() {
+      const { items, selectedId } = activeGroup;
       thumbs.querySelectorAll(".thumb").forEach((item) => item.remove());
       photoCount.textContent = `자료 ${items.length}개`;
 
@@ -701,6 +769,7 @@
       }
 
       const selected = items.find((item) => item.id === selectedId);
+      renderPreview(selected);
       photoName.textContent = selected?.name || "";
       photoPosition.textContent = selected
         ? `${items.indexOf(selected) + 1} / ${items.length}`
@@ -710,6 +779,7 @@
     chatForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const message = chatInput.value.trim();
+      const items = [...activeGroup.items];
       if (sending || (!message && !items.length)) return;
 
       const display = message
