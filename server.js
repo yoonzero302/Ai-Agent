@@ -6,6 +6,7 @@ const ROOT = __dirname;
 loadEnv(path.join(ROOT, ".env"));
 
 const PORT = Number(process.env.PORT || 8765);
+const HOST = process.env.HOST || (process.env.RAILWAY_ENVIRONMENT_ID ? "0.0.0.0" : "127.0.0.1");
 const BASE_URL = (process.env.ANYTHINGLLM_URL || "").replace(/\/+$/, "");
 const API_KEY = process.env.ANYTHINGLLM_API_KEY || "";
 const WORKSPACE_SLUG = process.env.ANYTHINGLLM_WORKSPACE_SLUG || "";
@@ -51,6 +52,10 @@ const server = http.createServer(async (request, response) => {
     return response.end();
   }
 
+  if (request.method === "GET" && request.url === "/healthz") {
+    return sendJson(response, 200, { ok: true });
+  }
+
   if (request.method === "GET" && request.url === "/api/health") {
     return checkAnythingLlm(response);
   }
@@ -71,7 +76,7 @@ async function checkAnythingLlm(response) {
   if (missing.length) {
     return sendJson(response, 503, {
       connected: false,
-      error: `.env 설정이 필요합니다: ${missing.join(", ")}`,
+      error: `서버 환경 변수 설정이 필요합니다: ${missing.join(", ")}`,
     });
   }
 
@@ -100,7 +105,7 @@ async function chat(request, response) {
   const missing = missingSettings();
   if (missing.length) {
     return sendJson(response, 503, {
-      error: `.env 설정이 필요합니다: ${missing.join(", ")}`,
+      error: `서버 환경 변수 설정이 필요합니다: ${missing.join(", ")}`,
     });
   }
 
@@ -359,7 +364,7 @@ async function proxyGeneratedFile(request, response) {
   const missing = missingSettings();
   if (missing.length) {
     return sendJson(response, 503, {
-      error: `.env 설정이 필요합니다: ${missing.join(", ")}`,
+      error: `서버 환경 변수 설정이 필요합니다: ${missing.join(", ")}`,
     });
   }
 
@@ -780,6 +785,7 @@ server.on("error", (error) => {
   process.exit(1);
 });
 
-server.listen(PORT, "127.0.0.1", () => {
-  console.log(`식물 관찰 학습: http://127.0.0.1:${PORT}`);
+server.listen(PORT, HOST, () => {
+  const address = server.address();
+  console.log(`식물 관찰 학습 서버 실행 중 (${address.address}:${address.port})`);
 });
